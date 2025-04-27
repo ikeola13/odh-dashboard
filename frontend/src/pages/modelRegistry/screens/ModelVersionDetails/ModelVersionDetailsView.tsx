@@ -22,6 +22,7 @@ import {
   getCatalogModelDetailsProps,
   getPipelineModelCustomProps,
 } from '~/pages/modelRegistry/screens/utils';
+import { SupportedArea, useIsAreaAvailable } from '~/concepts/areas';
 import useModelArtifactsByVersionId from '~/concepts/modelRegistry/apiHooks/useModelArtifactsByVersionId';
 import { ModelRegistryContext } from '~/concepts/modelRegistry/context/ModelRegistryContext';
 import ModelTimestamp from '~/pages/modelRegistry/screens/components/ModelTimestamp';
@@ -51,6 +52,7 @@ const ModelVersionDetailsView: React.FC<ModelVersionDetailsViewProps> = ({
     useModelArtifactsByVersionId(mv.id);
   const modelArtifact = modelArtifacts.items.length ? modelArtifacts.items[0] : null;
   const { apiState } = React.useContext(ModelRegistryContext);
+  const modelCatalogAvailable = useIsAreaAvailable(SupportedArea.MODEL_CATALOG).status;
   const storageFields = uriToModelLocation(modelArtifact?.uri || '');
   const pipelineCustomProperties = getPipelineModelCustomProps(mv.customProperties);
   const [registeredModel, registeredModelLoaded, registeredModelLoadError, refreshRegisteredModel] =
@@ -98,6 +100,11 @@ const ModelVersionDetailsView: React.FC<ModelVersionDetailsViewProps> = ({
     mv.customProperties,
   );
   const catalogModelDetailsUrl = getCatalogModelDetailsRoute(catalogModelCustomProps);
+  const registeredfromText = (
+    <span style={{ fontWeight: 'var(--pf-t--global--font--weight--body--bold)' }}>
+      {catalogModelCustomProps.modelName} ({catalogModelCustomProps.tag})
+    </span>
+  );
 
   return (
     <Flex
@@ -164,11 +171,13 @@ const ModelVersionDetailsView: React.FC<ModelVersionDetailsViewProps> = ({
           )}
           {catalogModelDetailsUrl && (
             <DashboardDescriptionListGroup title="Registered from" isEmpty={!mv.id}>
-              <Link to={catalogModelDetailsUrl} data-testid="registered-from-catalog">
-                <span style={{ fontWeight: 'var(--pf-t--global--font--weight--body--bold)' }}>
-                  {catalogModelCustomProps.modelName} ({catalogModelCustomProps.tag})
-                </span>
-              </Link>{' '}
+              {modelCatalogAvailable ? (
+                <Link to={catalogModelDetailsUrl} data-testid="registered-from-catalog">
+                  {registeredfromText}
+                </Link>
+              ) : (
+                registeredfromText
+              )}{' '}
               in Model catalog
             </DashboardDescriptionListGroup>
           )}

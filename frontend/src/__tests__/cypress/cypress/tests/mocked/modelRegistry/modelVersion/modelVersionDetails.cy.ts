@@ -130,12 +130,13 @@ const mockModelVersions = mockModelVersion({
   },
 });
 
-const initIntercepts = (isEmptyProject = false) => {
+const initIntercepts = (isEmptyProject = false, disableModelCatalog = false) => {
   cy.interceptOdh(
     'GET /api/config',
     mockDashboardConfig({
       disableModelRegistry: false,
       disableFineTuning: false,
+      disableModelCatalog,
     }),
   );
 
