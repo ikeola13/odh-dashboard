@@ -715,4 +715,21 @@ describe('Model version details', () => {
       modelVersionDetails.findStartRunModal().should('exist');
     });
   });
+
+  describe('Registered from catalog link', () => {
+    it('should show registered from catalog link when model catalog is available', () => {
+      initIntercepts(false, false);
+      modelVersionDetails.visit();
+      modelVersionDetails.findRegisteredFromCatalog().should('exist');
+      modelVersionDetails.findRegisteredFromCatalog().should('have.attr', 'href');
+      modelVersionDetails.findRegisteredFromCatalog().contains('test-catalog-model');
+    });
+
+    it('should show registered from text without link when model catalog is disabled', () => {
+      initIntercepts(false, true);
+      modelVersionDetails.visit();
+      cy.contains('test-catalog-model').should('exist');
+      modelVersionDetails.findRegisteredFromCatalog().should('not.exist');
+    });
+  });
 });
