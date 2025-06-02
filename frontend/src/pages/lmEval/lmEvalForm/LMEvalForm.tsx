@@ -21,13 +21,20 @@ import { OutlinedQuestionCircleIcon } from '@patternfly/react-icons';
 import { LmEvalFormData, LmModelArgument } from '~/pages/lmEval/types';
 import LMEvalApplicationPage from '~/pages/lmEval/components/LMEvalApplicationPage';
 import useLMGenericObjectState from '~/pages/lmEval/utilities/useLMGenericObjectState';
+import useInferenceServices from '~/pages/modelServing/useInferenceServices';
 import LmEvaluationFormFooter from './LMEvalFormFooter';
 import LmEvaluationTaskSection from './LMEvalTaskSection';
 import LmEvaluationSecuritySection from './LMEvalSecuritySection';
 import LmModelArgumentSection from './LMEvalModelArgumentSection';
 import { modelTypeOptions } from './const';
 
-const LMEvalForm: React.FC = () => {
+interface LMEvalFormProps {
+  namespace?: string;
+}
+
+const LMEvalForm: React.FC<LMEvalFormProps> = ({ namespace: propNamespace }) => {
+  const namespace = propNamespace || 'default';
+
   const [data, setData] = useLMGenericObjectState<LmEvalFormData>({
     deployedModelName: '',
     evaluationName: '',
@@ -43,10 +50,50 @@ const LMEvalForm: React.FC = () => {
     },
   });
   const [open, setOpen] = React.useState(false);
+  const [openModelName, setOpenModelName] = React.useState(false);
+  const inferenceServices = useInferenceServices();
+
+  const modelOptions = React.useMemo(() => {
+    if (!inferenceServices.loaded || inferenceServices.error || !namespace) {
+      return [];
+    }
+
+    return inferenceServices.data.items
+      .filter((service) => service.metadata.namespace === namespace)
+      .filter((service) => service.spec.predictor.model?.modelFormat?.name === 'vLLM')
+      .map((service) => {
+        const {
+          metadata: { annotations, name, namespace: serviceNamespace },
+        } = service;
+        const displayName = annotations?.['openshift.io/display-name'] || name;
+
+        return {
+          label: displayName,
+          value: name,
+          namespace: serviceNamespace,
+          displayName,
+          service,
+        };
+      });
+  }, [inferenceServices.loaded, inferenceServices.error, inferenceServices.data.items, namespace]);
+
+  React.useEffect(() => {
+    if (namespace && data.deployedModelName) {
+      const isModelInNamespace = modelOptions.some(
+        (model) => model.value === data.deployedModelName,
+      );
+      if (!isModelInNamespace) {
+        setData('deployedModelName', '');
+      }
+    }
+  }, [namespace, modelOptions, data.deployedModelName, setData]);
 
   const findOptionForKey = (key: string) => modelTypeOptions.find((option) => option.key === key);
   const selectedOption = data.modelType ? findOptionForKey(data.modelType) : undefined;
   const selectedLabel = selectedOption?.label ?? 'Select type a model';
+  const selectedModel = modelOptions.find((model) => model.value === data.deployedModelName);
+  const selectedModelLabel = selectedModel?.label || 'Select a model';
+
   return (
     <LMEvalApplicationPage
       loaded
@@ -66,7 +113,41 @@ const LMEvalForm: React.FC = () => {
     >
       <PageSection hasBodyWrapper={false} isFilled>
         <Form data-testid="lmEvaluationForm" maxWidth="800px">
-          <FormGroup label="Model name">{data.deployedModelName || '-'}</FormGroup>
+          <FormGroup label="Model Name" isRequired>
+            <Select
+              isOpen={openModelName}
+              selected={data.deployedModelName}
+              onSelect={(e, selectValue) => {
+                setData('deployedModelName', String(selectValue));
+                setOpenModelName(false);
+              }}
+              onOpenChange={setOpenModelName}
+              toggle={(toggleRef) => (
+                <MenuToggle
+                  isFullWidth
+                  ref={toggleRef}
+                  aria-label="Model options menu"
+                  onClick={() => setOpenModelName(!openModelName)}
+                  isExpanded={openModelName}
+                >
+                  <Truncate content={selectedModelLabel} className="truncate-no-min-width" />
+                </MenuToggle>
+              )}
+              shouldFocusToggleOnSelect
+            >
+              <SelectList>
+                {modelOptions.map((option) => (
+                  <SelectOption
+                    value={option.value}
+                    key={option.value}
+                    description={`${option.displayName} in ${option.namespace}`}
+                  >
+                    {option.label}
+                  </SelectOption>
+                ))}
+              </SelectList>
+            </Select>
+          </FormGroup>
           {/* TODO: add popover content */}
           <FormGroup
             label="Evaluation name"
@@ -162,4 +243,5 @@ const LMEvalForm: React.FC = () => {
   );
 };
 
+export type { LMEvalFormProps };
 export default LMEvalForm;
