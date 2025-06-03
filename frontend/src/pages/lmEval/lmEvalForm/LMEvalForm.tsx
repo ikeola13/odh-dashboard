@@ -18,10 +18,11 @@ import {
   Truncate,
 } from '@patternfly/react-core';
 import { OutlinedQuestionCircleIcon } from '@patternfly/react-icons';
-import { LmEvalFormData, LmModelArgument } from '~/pages/lmEval/types';
-import LMEvalApplicationPage from '~/pages/lmEval/components/LMEvalApplicationPage';
-import useLMGenericObjectState from '~/pages/lmEval/utilities/useLMGenericObjectState';
-import useInferenceServices from '~/pages/modelServing/useInferenceServices';
+import { LmEvalFormData, LmModelArgument } from '#~/pages/lmEval/types';
+import { InferenceServiceKind } from '#~/k8sTypes';
+import LMEvalApplicationPage from '#~/pages/lmEval/components/LMEvalApplicationPage';
+import useLMGenericObjectState from '#~/pages/lmEval/utilities/useLMGenericObjectState';
+import useInferenceServices from '#~/pages/modelServing/useInferenceServices';
 import LmEvaluationFormFooter from './LMEvalFormFooter';
 import LmEvaluationTaskSection from './LMEvalTaskSection';
 import LmEvaluationSecuritySection from './LMEvalSecuritySection';
@@ -31,6 +32,14 @@ import { modelTypeOptions } from './const';
 interface LMEvalFormProps {
   namespace?: string;
 }
+
+type ModelOption = {
+  label: string;
+  value: string;
+  namespace: string;
+  displayName: string;
+  service: InferenceServiceKind;
+};
 
 const LMEvalForm: React.FC<LMEvalFormProps> = ({ namespace: propNamespace }) => {
   const namespace = propNamespace || 'default';
@@ -59,9 +68,12 @@ const LMEvalForm: React.FC<LMEvalFormProps> = ({ namespace: propNamespace }) => 
     }
 
     return inferenceServices.data.items
-      .filter((service) => service.metadata.namespace === namespace)
-      .filter((service) => service.spec.predictor.model?.modelFormat?.name === 'vLLM')
-      .map((service) => {
+      .filter((service: InferenceServiceKind) => service.metadata.namespace === namespace)
+      .filter(
+        (service: InferenceServiceKind) =>
+          service.spec.predictor.model?.modelFormat?.name === 'vLLM',
+      )
+      .map((service: InferenceServiceKind) => {
         const {
           metadata: { annotations, name, namespace: serviceNamespace },
         } = service;
@@ -80,7 +92,7 @@ const LMEvalForm: React.FC<LMEvalFormProps> = ({ namespace: propNamespace }) => 
   React.useEffect(() => {
     if (namespace && data.deployedModelName) {
       const isModelInNamespace = modelOptions.some(
-        (model) => model.value === data.deployedModelName,
+        (model: ModelOption) => model.value === data.deployedModelName,
       );
       if (!isModelInNamespace) {
         setData('deployedModelName', '');
@@ -91,7 +103,9 @@ const LMEvalForm: React.FC<LMEvalFormProps> = ({ namespace: propNamespace }) => 
   const findOptionForKey = (key: string) => modelTypeOptions.find((option) => option.key === key);
   const selectedOption = data.modelType ? findOptionForKey(data.modelType) : undefined;
   const selectedLabel = selectedOption?.label ?? 'Select type a model';
-  const selectedModel = modelOptions.find((model) => model.value === data.deployedModelName);
+  const selectedModel = modelOptions.find(
+    (model: ModelOption) => model.value === data.deployedModelName,
+  );
   const selectedModelLabel = selectedModel?.label || 'Select a model';
 
   return (
@@ -136,7 +150,7 @@ const LMEvalForm: React.FC<LMEvalFormProps> = ({ namespace: propNamespace }) => 
               shouldFocusToggleOnSelect
             >
               <SelectList>
-                {modelOptions.map((option) => (
+                {modelOptions.map((option: ModelOption) => (
                   <SelectOption
                     value={option.value}
                     key={option.value}

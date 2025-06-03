@@ -1,22 +1,22 @@
-import type { DataScienceProjectData } from '~/__tests__/cypress/cypress/types';
-import { deleteOpenShiftProject } from '~/__tests__/cypress/cypress/utils/oc_commands/project';
-import { loadDSPFixture } from '~/__tests__/cypress/cypress/utils/dataLoader';
-import { HTPASSWD_CLUSTER_ADMIN_USER } from '~/__tests__/cypress/cypress/utils/e2eUsers';
-import { projectDetails, projectListPage } from '~/__tests__/cypress/cypress/pages/projects';
+import type { DataScienceProjectData } from '#~/__tests__/cypress/cypress/types';
+import { deleteOpenShiftProject } from '#~/__tests__/cypress/cypress/utils/oc_commands/project';
+import { loadDSPFixture } from '#~/__tests__/cypress/cypress/utils/dataLoader';
+import { HTPASSWD_CLUSTER_ADMIN_USER } from '#~/__tests__/cypress/cypress/utils/e2eUsers';
+import { projectDetails, projectListPage } from '#~/__tests__/cypress/cypress/pages/projects';
 import {
   modelServingGlobal,
   inferenceServiceModal,
   modelServingSection,
   createServingRuntimeModal,
-} from '~/__tests__/cypress/cypress/pages/modelServing';
+} from '#~/__tests__/cypress/cypress/pages/modelServing';
 import {
   checkInferenceServiceState,
   provisionProjectForModelServing,
   modelExternalTester,
-} from '~/__tests__/cypress/cypress/utils/oc_commands/modelServing';
-import { retryableBefore } from '~/__tests__/cypress/cypress/utils/retryableHooks';
-import { attemptToClickTooltip } from '~/__tests__/cypress/cypress/utils/models';
-import { generateTestUUID } from '~/__tests__/cypress/cypress/utils/uuidGenerator';
+} from '#~/__tests__/cypress/cypress/utils/oc_commands/modelServing';
+import { retryableBefore } from '#~/__tests__/cypress/cypress/utils/retryableHooks';
+import { attemptToClickTooltip } from '#~/__tests__/cypress/cypress/utils/models';
+import { generateTestUUID } from '#~/__tests__/cypress/cypress/utils/uuidGenerator';
 
 let testData: DataScienceProjectData;
 let projectName: string;
@@ -127,9 +127,9 @@ describe('Verify Admin Multi Model Creation and Validation using the UI', () => 
 
       //Verify the Model was created successfully
       cy.step('Verify that the Model is created Successfully on the backend and frontend');
-      checkInferenceServiceState(testData.multiModelAdminName);
+      checkInferenceServiceState(testData.multiModelAdminName, projectName);
       // Check only LatestDeploymentReady
-      checkInferenceServiceState(testData.multiModelAdminName, {
+      checkInferenceServiceState(testData.multiModelAdminName, projectName, {
         checkReady: true,
         checkLatestDeploymentReady: false,
       });
@@ -141,7 +141,7 @@ describe('Verify Admin Multi Model Creation and Validation using the UI', () => 
 
       //Verify the Model is accessible externally
       cy.step('Verify the model is accessible externally');
-      modelExternalTester(modelName).then(({ url, response }) => {
+      modelExternalTester(modelName, projectName).then(({ url, response }) => {
         expect(response.status).to.equal(200);
 
         //verify the External URL Matches the Backend
