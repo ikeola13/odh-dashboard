@@ -3,6 +3,8 @@ import {
   Breadcrumb,
   BreadcrumbItem,
   Button,
+  EmptyState,
+  EmptyStateBody,
   Form,
   FormGroup,
   FormSection,
@@ -14,29 +16,29 @@ import {
   Select,
   SelectList,
   SelectOption,
+  Skeleton,
   TextInput,
   Truncate,
 } from '@patternfly/react-core';
-import { OutlinedQuestionCircleIcon } from '@patternfly/react-icons';
+import { OutlinedQuestionCircleIcon, CubesIcon } from '@patternfly/react-icons';
 import { LmEvalFormData, LmModelArgument } from '#~/pages/lmEval/types';
-import { InferenceServiceKind } from '#~/k8sTypes';
 import useInferenceServices from '#~/pages/modelServing/useInferenceServices';
 import useLMGenericObjectState from '#~/pages/lmEval/utilities/useLMGenericObjectState';
 import LMEvalFormApplicationPage from '#~/pages/lmEval/components/LMEvalFormApplicationPage';
 import { LMEvalContext } from '#~/pages/lmEval/global/LMEvalContext';
+import {
+  ModelOption,
+  ModelTypeOption,
+  filterVLLMInference,
+  generateModelOptions,
+  handleModelSelection,
+  handleModelTypeSelection,
+} from '#~/pages/lmEval/utilities/modelUtils';
 import LmEvaluationTaskSection from './LMEvalTaskSection';
 import LmEvaluationSecuritySection from './LMEvalSecuritySection';
 import LmModelArgumentSection from './LMEvalModelArgumentSection';
 import { modelTypeOptions } from './const';
 import LMEvalFormFooter from './LMEvalFormFooter';
-
-type ModelOption = {
-  label: string;
-  value: string;
-  namespace: string;
-  displayName: string;
-  service: InferenceServiceKind;
-};
 
 const LMEvalForm: React.FC = () => {
   const { project } = React.useContext(LMEvalContext);
@@ -65,26 +67,8 @@ const LMEvalForm: React.FC = () => {
       return [];
     }
 
-    return inferenceServices.data.items
-      .filter((service: InferenceServiceKind) => service.metadata.namespace === namespace)
-      .filter(
-        (service: InferenceServiceKind) =>
-          service.spec.predictor.model?.modelFormat?.name === 'vLLM',
-      )
-      .map((service: InferenceServiceKind) => {
-        const {
-          metadata: { annotations, name, namespace: serviceNamespace },
-        } = service;
-        const displayName = annotations?.['openshift.io/display-name'] || name;
-
-        return {
-          label: displayName,
-          value: name,
-          namespace: serviceNamespace,
-          displayName,
-          service,
-        };
-      });
+    const filteredServices = filterVLLMInference(inferenceServices.data.items, namespace);
+    return generateModelOptions(filteredServices);
   }, [inferenceServices.loaded, inferenceServices.error, inferenceServices.data.items, namespace]);
 
   React.useEffect(() => {
@@ -103,13 +87,18 @@ const LMEvalForm: React.FC = () => {
     }
   }, [namespace, modelOptions, data.deployedModelName, setData, data.model]);
 
-  const findOptionForKey = (key: string) => modelTypeOptions.find((option) => option.key === key);
+  const findOptionForKey = (key: string): ModelTypeOption | undefined =>
+    modelTypeOptions.find((option) => option.key === key);
   const selectedOption = data.modelType ? findOptionForKey(data.modelType) : undefined;
   const selectedLabel = selectedOption?.label ?? 'Select type a model';
   const selectedModel = modelOptions.find(
     (model: ModelOption) => model.value === data.deployedModelName,
   );
   const selectedModelLabel = selectedModel?.label || 'Select a model';
+
+  const isLoading = !inferenceServices.loaded && !inferenceServices.error;
+  const hasNoModels =
+    inferenceServices.loaded && !inferenceServices.error && modelOptions.length === 0;
 
   return (
     <LMEvalFormApplicationPage
@@ -136,32 +125,16 @@ const LMEvalForm: React.FC = () => {
               selected={data.deployedModelName}
               onSelect={(e, selectValue) => {
                 const selectedModelName = String(selectValue);
-                setData('deployedModelName', selectedModelName);
-
-                const selectedModelOption = modelOptions.find(
-                  (option: ModelOption) => option.value === selectedModelName,
+                const result = handleModelSelection(
+                  selectedModelName,
+                  modelOptions,
+                  data.model,
+                  data.modelType,
+                  findOptionForKey,
                 );
 
-                if (selectedModelOption) {
-                  const baseUrl =
-                    selectedModelOption.service.status?.url ||
-                    selectedModelOption.service.status?.address?.url ||
-                    '';
-
-                  let finalUrl = baseUrl;
-                  if (data.modelType && baseUrl) {
-                    const modelOption = findOptionForKey(data.modelType);
-                    const endpoint = modelOption?.endpoint ?? '';
-                    finalUrl = `${baseUrl}${endpoint}`;
-                  }
-
-                  setData('model', {
-                    ...data.model,
-                    name: selectedModelOption.displayName,
-                    url: finalUrl,
-                  });
-                }
-
+                setData('deployedModelName', result.deployedModelName);
+                setData('model', result.model);
                 setOpenModelName(false);
               }}
               onOpenChange={setOpenModelName}
@@ -172,6 +145,7 @@ const LMEvalForm: React.FC = () => {
                   aria-label="Model options menu"
                   onClick={() => setOpenModelName(!openModelName)}
                   isExpanded={openModelName}
+                  isDisabled={false}
                 >
                   <Truncate content={selectedModelLabel} className="truncate-no-min-width" />
                 </MenuToggle>
@@ -179,15 +153,43 @@ const LMEvalForm: React.FC = () => {
               shouldFocusToggleOnSelect
             >
               <SelectList>
-                {modelOptions.map((option: ModelOption) => (
-                  <SelectOption
-                    value={option.value}
-                    key={option.value}
-                    description={`${option.displayName} in ${option.namespace}`}
-                  >
-                    {option.label}
-                  </SelectOption>
-                ))}
+                {isLoading ? (
+                  <>
+                    <SelectOption key="skeleton-1" isDisabled>
+                      <Skeleton width="80%" />
+                    </SelectOption>
+                    <SelectOption key="skeleton-2" isDisabled>
+                      <Skeleton width="60%" />
+                    </SelectOption>
+                    <SelectOption key="skeleton-3" isDisabled>
+                      <Skeleton width="90%" />
+                    </SelectOption>
+                  </>
+                ) : hasNoModels ? (
+                  <div style={{ padding: '1rem' }}>
+                    <EmptyState
+                      headingLevel="h4"
+                      icon={CubesIcon}
+                      titleText="No vLLM models available"
+                      variant="xs"
+                    >
+                      <EmptyStateBody>
+                        No vLLM inference services are available in the &apos;{namespace}&apos;
+                        namespace. Deploy a vLLM model to proceed with evaluation.
+                      </EmptyStateBody>
+                    </EmptyState>
+                  </div>
+                ) : (
+                  modelOptions.map((option: ModelOption) => (
+                    <SelectOption
+                      value={option.value}
+                      key={option.value}
+                      description={`${option.displayName} in ${option.namespace}`}
+                    >
+                      {option.label}
+                    </SelectOption>
+                  ))
+                )}
               </SelectList>
             </Select>
           </FormGroup>
@@ -226,17 +228,10 @@ const LMEvalForm: React.FC = () => {
               selected={data.modelType}
               onSelect={(e, selectValue) => {
                 const modelType = String(selectValue);
-                setData('modelType', modelType);
+                const result = handleModelTypeSelection(modelType, data.model, findOptionForKey);
 
-                if (data.model.url) {
-                  const baseUrl = data.model.url.replace(/\/v1\/(chat\/)?completions/, '');
-                  const modelOption = findOptionForKey(modelType);
-                  const endpoint = modelOption?.endpoint ?? '';
-                  setData('model', {
-                    ...data.model,
-                    url: `${baseUrl}${endpoint}`,
-                  });
-                }
+                setData('modelType', result.modelType);
+                setData('model', result.model);
                 setOpen(false);
               }}
               onOpenChange={setOpen}

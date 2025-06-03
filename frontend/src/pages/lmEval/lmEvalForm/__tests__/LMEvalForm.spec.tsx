@@ -126,7 +126,7 @@ describe('LMEvalForm', () => {
     });
   });
 
-  it('should handle loading state', () => {
+  it('should handle loading state', async () => {
     mockUseInferenceServices.mockReturnValue(
       standardUseFetchStateObject({
         data: { items: [], hasNonDashboardItems: false },
@@ -136,15 +136,24 @@ describe('LMEvalForm', () => {
 
     renderWithContext('default');
 
-    // Model dropdown should be present but empty when loading
+    // Model dropdown should be enabled even when loading
     const modelDropdown = screen.getByLabelText('Model options menu');
+    expect(modelDropdown).not.toBeDisabled();
+
+    // Should show normal text in toggle
+    expect(screen.getByText('Select a model')).toBeInTheDocument();
+
+    // Open dropdown to check loading skeleton in list
     fireEvent.click(modelDropdown);
 
-    // Should not show any model options
-    expect(screen.queryByText('Model One')).not.toBeInTheDocument();
+    // Wait for skeleton elements to render (they're in the dropdown portal)
+    await waitFor(() => {
+      const loadingSkeletons = document.querySelectorAll('.pf-v6-c-skeleton');
+      expect(loadingSkeletons.length).toBe(3); // Should have 3 skeleton elements
+    });
   });
 
-  it('should handle error state', () => {
+  it('should handle error state with no data loaded', () => {
     mockUseInferenceServices.mockReturnValue(
       standardUseFetchStateObject({
         data: { items: [], hasNonDashboardItems: false },
@@ -155,12 +164,37 @@ describe('LMEvalForm', () => {
 
     renderWithContext('default');
 
-    // Model dropdown should be present but empty when there's an error
+    // Model dropdown should be enabled when there's an error
     const modelDropdown = screen.getByLabelText('Model options menu');
+    expect(modelDropdown).not.toBeDisabled();
+
+    // Should show normal text in toggle
+    expect(screen.getByText('Select a model')).toBeInTheDocument();
+
+    // Open dropdown - should NOT show skeleton since there's an error (even if loaded=false)
     fireEvent.click(modelDropdown);
 
-    // Should not show any model options
-    expect(screen.queryByText('Model One')).not.toBeInTheDocument();
+    // Should NOT show skeleton options when there's an error (error state takes precedence over loading)
+    const skeletonElements = document.querySelectorAll('.pf-v6-c-skeleton');
+    expect(skeletonElements.length).toBe(0); // Should have no skeleton elements when there's an error
+  });
+
+  it('should show empty state when no models are available', () => {
+    setupInferenceServicesMock([]);
+    renderWithContext('default');
+
+    // Model dropdown should be enabled when data is loaded
+    const modelDropdown = screen.getByLabelText('Model options menu');
+    expect(modelDropdown).not.toBeDisabled();
+
+    // Open model dropdown
+    fireEvent.click(modelDropdown);
+
+    // Should show empty state
+    expect(screen.getByText('No vLLM models available')).toBeInTheDocument();
+    expect(
+      screen.getByText(/No vLLM inference services are available in the 'default' namespace/),
+    ).toBeInTheDocument();
   });
 
   it('should render all form sections', () => {
@@ -171,18 +205,6 @@ describe('LMEvalForm', () => {
     expect(screen.getByTestId('lm-eval-security-section')).toBeInTheDocument();
     expect(screen.getByTestId('lm-eval-model-argument-section')).toBeInTheDocument();
     expect(screen.getByTestId('lm-eval-form-footer')).toBeInTheDocument();
-  });
-
-  it('should handle empty inference services list', () => {
-    setupInferenceServicesMock([]);
-    renderWithContext('default');
-
-    // Open model dropdown
-    const modelDropdown = screen.getByLabelText('Model options menu');
-    fireEvent.click(modelDropdown);
-
-    // Should not show any options
-    expect(screen.queryByText('Model One')).not.toBeInTheDocument();
   });
 
   it('should only show vLLM models in the dropdown', async () => {
