@@ -1,10 +1,16 @@
 import * as React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import LMEvalForm from '#~/pages/lmEval/lmEvalForm/LMEvalForm';
 import useInferenceServices from '#~/pages/modelServing/useInferenceServices';
 import { standardUseFetchStateObject } from '#~/__tests__/unit/testUtils/hooks';
 import { mockInferenceServices, nonVllmService } from './__mocks__/mockInferenceServicesData';
+import {
+  renderWithContext,
+  createMockServicesWithUrls,
+  defaultLMEvalFormState,
+  selectModel,
+  selectModelType,
+} from './__mocks__/testUtils';
 
 // Mock the dependencies
 jest.mock('#~/pages/modelServing/useInferenceServices', () => ({
@@ -14,27 +20,11 @@ jest.mock('#~/pages/modelServing/useInferenceServices', () => ({
 
 jest.mock('#~/pages/lmEval/utilities/useLMGenericObjectState', () => ({
   __esModule: true,
-  default: jest.fn(() => [
-    {
-      deployedModelName: '',
-      evaluationName: '',
-      tasks: [],
-      modelType: '',
-      allowRemoteCode: false,
-      allowOnline: false,
-      model: {
-        name: '',
-        url: '',
-        tokenizedRequest: false,
-        tokenizer: '',
-      },
-    },
-    jest.fn(),
-  ]),
+  default: jest.fn(),
 }));
 
 // Mock other components to focus on the dropdown functionality
-jest.mock('#~/pages/lmEval/components/LMEvalApplicationPage', () => ({
+jest.mock('#~/pages/lmEval/components/LMEvalFormApplicationPage', () => ({
   __esModule: true,
   default: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="lm-eval-app-page">{children}</div>
@@ -63,35 +53,54 @@ jest.mock('#~/pages/lmEval/lmEvalForm/LMEvalModelArgumentSection', () => ({
 
 const mockUseInferenceServices = jest.mocked(useInferenceServices);
 
+// Helper function to setup standard inference services mock
+const setupInferenceServicesMock = (services = mockInferenceServices) => {
+  mockUseInferenceServices.mockReturnValue(
+    standardUseFetchStateObject({
+      data: { items: services, hasNonDashboardItems: false },
+      loaded: true,
+    }),
+  );
+};
+
+// Helper function to setup useLMGenericObjectState mock
+const setupLMGenericObjectStateMock = (overrides = {}) => {
+  const mockSetData = jest.fn();
+  const state = {
+    ...defaultLMEvalFormState,
+    ...overrides,
+  };
+
+  const mockUseLMGenericObjectState = jest.mocked(
+    require('#~/pages/lmEval/utilities/useLMGenericObjectState').default,
+  );
+  mockUseLMGenericObjectState.mockReturnValue([state, mockSetData]);
+
+  return mockSetData;
+};
+
 describe('LMEvalForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Set up default mock for useLMGenericObjectState
+    const mockUseLMGenericObjectState = jest.mocked(
+      require('#~/pages/lmEval/utilities/useLMGenericObjectState').default,
+    );
+    mockUseLMGenericObjectState.mockReturnValue([defaultLMEvalFormState, jest.fn()]);
   });
 
-  it('should use default namespace when no namespace prop provided', () => {
-    mockUseInferenceServices.mockReturnValue(
-      standardUseFetchStateObject({
-        data: { items: mockInferenceServices, hasNonDashboardItems: false },
-        loaded: true,
-      }),
-    );
-
-    render(<LMEvalForm />);
+  it('should use default namespace when no project in context', () => {
+    setupInferenceServicesMock();
+    renderWithContext();
 
     // Should show model dropdown
     expect(screen.getByText('Model Name')).toBeInTheDocument();
     expect(screen.getByText('Select a model')).toBeInTheDocument();
   });
 
-  it('should render the form with model dropdown when namespace is provided', () => {
-    mockUseInferenceServices.mockReturnValue(
-      standardUseFetchStateObject({
-        data: { items: mockInferenceServices, hasNonDashboardItems: false },
-        loaded: true,
-      }),
-    );
-
-    render(<LMEvalForm namespace="default" />);
+  it('should render the form with model dropdown when project is provided', () => {
+    setupInferenceServicesMock();
+    renderWithContext('default');
 
     // Should not show namespace dropdown
     expect(screen.queryByText('Namespace')).not.toBeInTheDocument();
@@ -102,15 +111,9 @@ describe('LMEvalForm', () => {
     expect(screen.getByText('Select a model')).toBeInTheDocument();
   });
 
-  it('should show models from the provided namespace', async () => {
-    mockUseInferenceServices.mockReturnValue(
-      standardUseFetchStateObject({
-        data: { items: mockInferenceServices, hasNonDashboardItems: false },
-        loaded: true,
-      }),
-    );
-
-    render(<LMEvalForm namespace="default" />);
+  it('should show models from the project namespace', async () => {
+    setupInferenceServicesMock();
+    renderWithContext('default');
 
     // Open model dropdown
     const modelDropdown = screen.getByLabelText('Model options menu');
@@ -131,7 +134,7 @@ describe('LMEvalForm', () => {
       }),
     );
 
-    render(<LMEvalForm namespace="default" />);
+    renderWithContext('default');
 
     // Model dropdown should be present but empty when loading
     const modelDropdown = screen.getByLabelText('Model options menu');
@@ -150,7 +153,7 @@ describe('LMEvalForm', () => {
       }),
     );
 
-    render(<LMEvalForm namespace="default" />);
+    renderWithContext('default');
 
     // Model dropdown should be present but empty when there's an error
     const modelDropdown = screen.getByLabelText('Model options menu');
@@ -161,14 +164,8 @@ describe('LMEvalForm', () => {
   });
 
   it('should render all form sections', () => {
-    mockUseInferenceServices.mockReturnValue(
-      standardUseFetchStateObject({
-        data: { items: mockInferenceServices, hasNonDashboardItems: false },
-        loaded: true,
-      }),
-    );
-
-    render(<LMEvalForm namespace="default" />);
+    setupInferenceServicesMock();
+    renderWithContext('default');
 
     expect(screen.getByTestId('lm-eval-task-section')).toBeInTheDocument();
     expect(screen.getByTestId('lm-eval-security-section')).toBeInTheDocument();
@@ -177,14 +174,8 @@ describe('LMEvalForm', () => {
   });
 
   it('should handle empty inference services list', () => {
-    mockUseInferenceServices.mockReturnValue(
-      standardUseFetchStateObject({
-        data: { items: [], hasNonDashboardItems: false },
-        loaded: true,
-      }),
-    );
-
-    render(<LMEvalForm namespace="default" />);
+    setupInferenceServicesMock([]);
+    renderWithContext('default');
 
     // Open model dropdown
     const modelDropdown = screen.getByLabelText('Model options menu');
@@ -197,15 +188,8 @@ describe('LMEvalForm', () => {
   it('should only show vLLM models in the dropdown', async () => {
     // Include both vLLM and non-vLLM services
     const mixedServices = [...mockInferenceServices, nonVllmService];
-
-    mockUseInferenceServices.mockReturnValue(
-      standardUseFetchStateObject({
-        data: { items: mixedServices, hasNonDashboardItems: false },
-        loaded: true,
-      }),
-    );
-
-    render(<LMEvalForm namespace="default" />);
+    setupInferenceServicesMock(mixedServices);
+    renderWithContext('default');
 
     // Open model dropdown
     const modelDropdown = screen.getByLabelText('Model options menu');
@@ -220,16 +204,10 @@ describe('LMEvalForm', () => {
     });
   });
 
-  it('should filter models by the provided namespace', async () => {
-    mockUseInferenceServices.mockReturnValue(
-      standardUseFetchStateObject({
-        data: { items: mockInferenceServices, hasNonDashboardItems: false },
-        loaded: true,
-      }),
-    );
-
+  it('should filter models by the project namespace', async () => {
+    setupInferenceServicesMock();
     // Render with 'production' namespace
-    render(<LMEvalForm namespace="production" />);
+    renderWithContext('production');
 
     // Open model dropdown
     const modelDropdown = screen.getByLabelText('Model options menu');
@@ -241,6 +219,96 @@ describe('LMEvalForm', () => {
       // Should NOT show models from other namespaces
       expect(screen.queryByText('Model One')).not.toBeInTheDocument();
       expect(screen.queryByText('Model Two')).not.toBeInTheDocument();
+    });
+  });
+
+  it('should populate model name and URL when a model is selected', async () => {
+    const mockSetData = setupLMGenericObjectStateMock();
+    const mockServicesWithUrls = createMockServicesWithUrls();
+    setupInferenceServicesMock(mockServicesWithUrls as typeof mockInferenceServices);
+    renderWithContext('default');
+
+    await selectModel('Model One');
+
+    // Verify setData was called to update deployedModelName
+    expect(mockSetData).toHaveBeenCalledWith('deployedModelName', 'model-1');
+
+    // Verify setData was called to update model arguments
+    expect(mockSetData).toHaveBeenCalledWith('model', {
+      name: 'Model One',
+      url: 'https://model-1.apps.example.com',
+      tokenizedRequest: false,
+      tokenizer: '',
+    });
+  });
+
+  it('should populate model name and URL with endpoint when model type is already selected', async () => {
+    const mockSetData = setupLMGenericObjectStateMock({
+      modelType: 'local-chat-completion',
+    });
+    const mockServicesWithUrls = createMockServicesWithUrls();
+    setupInferenceServicesMock(mockServicesWithUrls as typeof mockInferenceServices);
+    renderWithContext('default');
+
+    await selectModel('Model One');
+
+    // Verify setData was called to update model arguments with endpoint appended
+    expect(mockSetData).toHaveBeenCalledWith('model', {
+      name: 'Model One',
+      url: 'https://model-1.apps.example.com/v1/chat/completions',
+      tokenizedRequest: false,
+      tokenizer: '',
+    });
+  });
+
+  it('should clear model arguments when model becomes unavailable after namespace change', () => {
+    const mockSetData = setupLMGenericObjectStateMock({
+      deployedModelName: 'model-1',
+      model: {
+        name: 'Model One',
+        url: 'https://model-1.apps.example.com',
+        tokenizedRequest: false,
+        tokenizer: '',
+      },
+    });
+    // Mock inference services that don't include model-1 (simulating namespace change)
+    setupInferenceServicesMock([]);
+    renderWithContext('default');
+
+    // The useEffect should trigger and clear the model
+    expect(mockSetData).toHaveBeenCalledWith('deployedModelName', '');
+    expect(mockSetData).toHaveBeenCalledWith('model', {
+      name: '',
+      url: '',
+      tokenizedRequest: false,
+      tokenizer: '',
+    });
+  });
+
+  it('should append endpoint to existing URL when model type is selected', () => {
+    const mockSetData = setupLMGenericObjectStateMock({
+      deployedModelName: 'model-1',
+      model: {
+        name: 'Model One',
+        url: 'https://model-1.apps.example.com',
+        tokenizedRequest: false,
+        tokenizer: '',
+      },
+    });
+    setupInferenceServicesMock();
+    renderWithContext('default');
+
+    selectModelType('Local chat completion');
+
+    // Verify setData was called to update model type
+    expect(mockSetData).toHaveBeenCalledWith('modelType', 'local-chat-completion');
+
+    // Verify setData was called to update URL with endpoint
+    expect(mockSetData).toHaveBeenCalledWith('model', {
+      name: 'Model One',
+      url: 'https://model-1.apps.example.com/v1/chat/completions',
+      tokenizedRequest: false,
+      tokenizer: '',
     });
   });
 });

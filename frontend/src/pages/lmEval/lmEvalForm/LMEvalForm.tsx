@@ -23,15 +23,12 @@ import { InferenceServiceKind } from '#~/k8sTypes';
 import useInferenceServices from '#~/pages/modelServing/useInferenceServices';
 import useLMGenericObjectState from '#~/pages/lmEval/utilities/useLMGenericObjectState';
 import LMEvalFormApplicationPage from '#~/pages/lmEval/components/LMEvalFormApplicationPage';
+import { LMEvalContext } from '#~/pages/lmEval/global/LMEvalContext';
 import LmEvaluationTaskSection from './LMEvalTaskSection';
 import LmEvaluationSecuritySection from './LMEvalSecuritySection';
 import LmModelArgumentSection from './LMEvalModelArgumentSection';
 import { modelTypeOptions } from './const';
 import LMEvalFormFooter from './LMEvalFormFooter';
-
-interface LMEvalFormProps {
-  namespace?: string;
-}
 
 type ModelOption = {
   label: string;
@@ -41,8 +38,9 @@ type ModelOption = {
   service: InferenceServiceKind;
 };
 
-const LMEvalForm: React.FC<LMEvalFormProps> = ({ namespace: propNamespace }) => {
-  const namespace = propNamespace || 'default';
+const LMEvalForm: React.FC = () => {
+  const { project } = React.useContext(LMEvalContext);
+  const namespace = project?.metadata.name || 'default';
 
   const [data, setData] = useLMGenericObjectState<LmEvalFormData>({
     deployedModelName: '',
@@ -96,9 +94,14 @@ const LMEvalForm: React.FC<LMEvalFormProps> = ({ namespace: propNamespace }) => 
       );
       if (!isModelInNamespace) {
         setData('deployedModelName', '');
+        setData('model', {
+          ...data.model,
+          name: '',
+          url: '',
+        });
       }
     }
-  }, [namespace, modelOptions, data.deployedModelName, setData]);
+  }, [namespace, modelOptions, data.deployedModelName, setData, data.model]);
 
   const findOptionForKey = (key: string) => modelTypeOptions.find((option) => option.key === key);
   const selectedOption = data.modelType ? findOptionForKey(data.modelType) : undefined;
@@ -132,7 +135,33 @@ const LMEvalForm: React.FC<LMEvalFormProps> = ({ namespace: propNamespace }) => 
               isOpen={openModelName}
               selected={data.deployedModelName}
               onSelect={(e, selectValue) => {
-                setData('deployedModelName', String(selectValue));
+                const selectedModelName = String(selectValue);
+                setData('deployedModelName', selectedModelName);
+
+                const selectedModelOption = modelOptions.find(
+                  (option: ModelOption) => option.value === selectedModelName,
+                );
+
+                if (selectedModelOption) {
+                  const baseUrl =
+                    selectedModelOption.service.status?.url ||
+                    selectedModelOption.service.status?.address?.url ||
+                    '';
+
+                  let finalUrl = baseUrl;
+                  if (data.modelType && baseUrl) {
+                    const modelOption = findOptionForKey(data.modelType);
+                    const endpoint = modelOption?.endpoint ?? '';
+                    finalUrl = `${baseUrl}${endpoint}`;
+                  }
+
+                  setData('model', {
+                    ...data.model,
+                    name: selectedModelOption.displayName,
+                    url: finalUrl,
+                  });
+                }
+
                 setOpenModelName(false);
               }}
               onOpenChange={setOpenModelName}
@@ -199,14 +228,15 @@ const LMEvalForm: React.FC<LMEvalFormProps> = ({ namespace: propNamespace }) => 
                 const modelType = String(selectValue);
                 setData('modelType', modelType);
 
-                // Remove any existing endpoint and add the new one
-                const baseUrl = data.model.url.replace(/\/v1\/(chat\/)?completions/, '');
-                const modelOption = findOptionForKey(modelType);
-                const endpoint = modelOption?.endpoint ?? '';
-                setData('model', {
-                  ...data.model,
-                  url: `${baseUrl}${endpoint}`,
-                });
+                if (data.model.url) {
+                  const baseUrl = data.model.url.replace(/\/v1\/(chat\/)?completions/, '');
+                  const modelOption = findOptionForKey(modelType);
+                  const endpoint = modelOption?.endpoint ?? '';
+                  setData('model', {
+                    ...data.model,
+                    url: `${baseUrl}${endpoint}`,
+                  });
+                }
                 setOpen(false);
               }}
               onOpenChange={setOpen}
@@ -257,5 +287,4 @@ const LMEvalForm: React.FC<LMEvalFormProps> = ({ namespace: propNamespace }) => 
   );
 };
 
-export type { LMEvalFormProps };
 export default LMEvalForm;
