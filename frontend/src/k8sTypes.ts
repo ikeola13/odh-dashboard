@@ -1270,7 +1270,7 @@ export type AcceleratorProfileKind = K8sResourceCommon & {
   };
 };
 
-export type LMEvaluationKind = K8sResourceCommon & {
+export type LMEvalKind = K8sResourceCommon & {
   metadata: {
     name: string;
     namespace: string;
@@ -1281,7 +1281,7 @@ export type LMEvaluationKind = K8sResourceCommon & {
     batchSize?: string;
     logSamples?: boolean;
     model: string;
-    modelArgs?: string[];
+    modelArgs?: { name: string; value: string }[];
     timeout?: number;
     taskList: {
       taskNames: string[];

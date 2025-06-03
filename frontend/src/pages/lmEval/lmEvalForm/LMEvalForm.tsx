@@ -20,14 +20,14 @@ import {
 import { OutlinedQuestionCircleIcon } from '@patternfly/react-icons';
 import { LmEvalFormData, LmModelArgument } from '#~/pages/lmEval/types';
 import { InferenceServiceKind } from '#~/k8sTypes';
-import LMEvalApplicationPage from '#~/pages/lmEval/components/LMEvalApplicationPage';
-import useLMGenericObjectState from '#~/pages/lmEval/utilities/useLMGenericObjectState';
 import useInferenceServices from '#~/pages/modelServing/useInferenceServices';
-import LmEvaluationFormFooter from './LMEvalFormFooter';
+import useLMGenericObjectState from '#~/pages/lmEval/utilities/useLMGenericObjectState';
+import LMEvalFormApplicationPage from '#~/pages/lmEval/components/LMEvalFormApplicationPage';
 import LmEvaluationTaskSection from './LMEvalTaskSection';
 import LmEvaluationSecuritySection from './LMEvalSecuritySection';
 import LmModelArgumentSection from './LMEvalModelArgumentSection';
 import { modelTypeOptions } from './const';
+import LMEvalFormFooter from './LMEvalFormFooter';
 
 interface LMEvalFormProps {
   namespace?: string;
@@ -109,7 +109,7 @@ const LMEvalForm: React.FC<LMEvalFormProps> = ({ namespace: propNamespace }) => 
   const selectedModelLabel = selectedModel?.label || 'Select a model';
 
   return (
-    <LMEvalApplicationPage
+    <LMEvalFormApplicationPage
       loaded
       title="Evaluate model"
       description={
@@ -249,11 +249,11 @@ const LMEvalForm: React.FC<LMEvalFormProps> = ({ namespace: propNamespace }) => 
             setModelArgument={(modelArgument: LmModelArgument) => setData('model', modelArgument)}
           />
           <FormSection>
-            <LmEvaluationFormFooter data={data} />
+            <LMEvalFormFooter data={data} />
           </FormSection>
         </Form>
       </PageSection>
-    </LMEvalApplicationPage>
+    </LMEvalFormApplicationPage>
   );
 };
 
