@@ -1,4 +1,4 @@
-import { mockInferenceServiceK8sResource } from '~/__mocks__/mockInferenceServiceK8sResource';
+import { mockInferenceServiceK8sResource } from '#~/__mocks__/mockInferenceServiceK8sResource';
 
 // Mock inference services data with vLLM modelFormat
 export const mockInferenceServices = [
