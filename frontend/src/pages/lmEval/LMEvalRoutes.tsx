@@ -4,7 +4,6 @@ import ProjectsRoutes from '#~/concepts/projects/ProjectsRoutes';
 import LMEvalForm from './lmEvalForm/LMEvalForm';
 import LMEvalCoreLoader from './global/LMEvalCoreLoader';
 import LMEval from './global/LMEval';
-import LMEvalResult from './lmEvalResult/lmEvalResult';
 
 const LMEvalRoutes: React.FC = () => (
   <ProjectsRoutes>
@@ -18,7 +17,6 @@ const LMEvalRoutes: React.FC = () => (
     >
       <Route index element={<LMEval />} />
       <Route path="evaluate" element={<LMEvalForm />} />
-      <Route path="result/:evaluationName" element={<LMEvalResult />} />
       <Route path="*" element={<Navigate to="." />} />
     </Route>
   </ProjectsRoutes>
