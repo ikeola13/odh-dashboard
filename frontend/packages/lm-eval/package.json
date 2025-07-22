@@ -31,5 +31,8 @@
       "name": "lm-eval-ui-service",
       "port": 8080
     }
+  },
+  "exports": {
+    "./extensions": "./upstream/frontend/odh/extensions.ts"
   }
 }
