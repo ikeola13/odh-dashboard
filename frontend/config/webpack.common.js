@@ -66,6 +66,27 @@ module.exports = (env) => ({
           path.resolve(RELATIVE_DIRNAME, 'node_modules/@patternfly/patternfly/assets/fonts'),
           path.resolve(RELATIVE_DIRNAME, 'node_modules/@patternfly/patternfly/assets/pficon'),
           path.resolve(RELATIVE_DIRNAME, 'node_modules/monaco-editor'),
+          // Add lm-eval package's node_modules for font handling
+          path.resolve(
+            RELATIVE_DIRNAME,
+            'packages/lm-eval/upstream/frontend/node_modules/patternfly/dist/fonts',
+          ),
+          path.resolve(
+            RELATIVE_DIRNAME,
+            'packages/lm-eval/upstream/frontend/node_modules/@patternfly/react-core/dist/styles/assets/fonts',
+          ),
+          path.resolve(
+            RELATIVE_DIRNAME,
+            'packages/lm-eval/upstream/frontend/node_modules/@patternfly/react-core/dist/styles/assets/pficon',
+          ),
+          path.resolve(
+            RELATIVE_DIRNAME,
+            'packages/lm-eval/upstream/frontend/node_modules/@patternfly/patternfly/assets/fonts',
+          ),
+          path.resolve(
+            RELATIVE_DIRNAME,
+            'packages/lm-eval/upstream/frontend/node_modules/@patternfly/patternfly/assets/pficon',
+          ),
         ],
         use: {
           loader: 'file-loader',
@@ -237,5 +258,10 @@ module.exports = (env) => ({
     extensions: ['.js', '.ts', '.tsx', '.jsx'],
     symlinks: true,
     cacheWithContext: false,
+    alias: {
+      // Add aliases for lm-eval package
+      '@app': path.resolve(RELATIVE_DIRNAME, 'packages/lm-eval/upstream/frontend/src/app'),
+      '~': path.resolve(RELATIVE_DIRNAME, 'packages/lm-eval/upstream/frontend/src'),
+    },
   },
 });
