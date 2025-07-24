@@ -25,14 +25,11 @@
     ],
     "local": {
       "host": "localhost",
-      "port": 9000
+      "port": 9001
     },
     "service": {
       "name": "lm-eval-ui-service",
-      "port": 8080
+      "port": 8081
     }
-  },
-  "exports": {
-    "./extensions": "./upstream/frontend/odh/extensions.ts"
   }
 }
