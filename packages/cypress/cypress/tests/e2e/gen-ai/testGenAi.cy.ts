@@ -33,7 +33,7 @@ import {
   createCleanHardwareProfile,
 } from '../../../utils/oc_commands/hardwareProfiles';
 
-describe('[Automation Bug: RHOAIENG-52445] Verify Gen AI Namespace - Creation and Connection', () => {
+describe('Verify Gen AI Namespace - Creation and Connection', () => {
   let testData: GenAiTestData;
   let projectName: string;
   let skipTest = false;
@@ -297,6 +297,9 @@ describe('[Automation Bug: RHOAIENG-52445] Verify Gen AI Namespace - Creation an
 
       cy.step('Wait for playground service to be created');
       waitForResource('service', testData.playgroundServiceName, projectName);
+
+      // eslint-disable-next-line cypress/no-unnecessary-waiting
+      // cy.wait(3000);
 
       cy.step('Navigate to playground URL');
       genAiPlayground.navigate(projectName);
