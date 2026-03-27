@@ -178,15 +178,7 @@ describe('Verify Gen AI Namespace - Creation and Connection', () => {
   it(
     'Deploy Gen AI model using URI',
     {
-      tags: [
-        '@Sanity',
-        '@SanitySet1',
-        '@GenAI',
-        '@ModelServing',
-        '@Deployment',
-        '@NonConcurrent',
-        '@Maintain',
-      ],
+      tags: ['@Sanity', '@SanitySet1', '@GenAI', '@ModelServing', '@Deployment', '@NonConcurrent'],
     },
     () => {
       if (skipTest) {
@@ -264,7 +256,7 @@ describe('Verify Gen AI Namespace - Creation and Connection', () => {
   it(
     'Create and verify Gen AI Playground functionality',
     {
-      tags: ['@Sanity', '@SanitySet1', '@GenAI', '@Playground', '@NonConcurrent', '@Maintain'],
+      tags: ['@Sanity', '@SanitySet1', '@GenAI', '@Playground', '@NonConcurrent'],
     },
     () => {
       if (skipTest) {
@@ -297,9 +289,6 @@ describe('Verify Gen AI Namespace - Creation and Connection', () => {
 
       cy.step('Wait for playground service to be created');
       waitForResource('service', testData.playgroundServiceName, projectName);
-
-      // eslint-disable-next-line cypress/no-unnecessary-waiting
-      // cy.wait(3000);
 
       cy.step('Navigate to playground URL');
       genAiPlayground.navigate(projectName);
