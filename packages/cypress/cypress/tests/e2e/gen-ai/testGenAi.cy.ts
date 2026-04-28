@@ -7,11 +7,8 @@ import { deleteOpenShiftProject } from '../../../utils/oc_commands/project';
 import { checkInferenceServiceState } from '../../../utils/oc_commands/modelServing';
 import { checkLlamaStackDistributionReady } from '../../../utils/oc_commands/llamaStackDistribution';
 import { waitForResource } from '../../../utils/oc_commands/baseCommands';
-import {
-  enableGenAiFeatures,
-  disableGenAiFeatures,
-  cleanupServingRuntimeTemplate,
-} from '../../../utils/oc_commands/genAi';
+import { enableGenAiFeatures, disableGenAiFeatures } from '../../../utils/oc_commands/genAi';
+import { cleanupServingRuntimeTemplate } from '../../../utils/oc_commands/servingRuntimeTemplate';
 import { getCustomResource } from '../../../utils/oc_commands/customResources';
 import { retryableBefore } from '../../../utils/retryableHooks';
 import { generateTestUUID } from '../../../utils/uuidGenerator';
